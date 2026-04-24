@@ -1,0 +1,71 @@
+name: SimpTradKeyboard
+options:
+  bundleIdPrefix: com.qqna
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+packages:
+  KeyboardCore:
+    path: KeyboardCore
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    CODE_SIGNING_ALLOWED: "NO"
+    CODE_SIGNING_REQUIRED: "NO"
+
+targets:
+  SimpTradKeyboard:
+    type: application
+    platform: iOS
+    sources:
+      - path: SimpTradKeyboard
+    dependencies:
+      - target: SimpTradKeyboardExtension
+        embed: true
+      - package: KeyboardCore
+    info:
+      path: SimpTradKeyboard/Info.plist
+      properties:
+        CFBundleDisplayName: SimpTrad
+        UILaunchScreen:
+          UIColorName: ""
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.qqna.simptradkeyboard
+        CODE_SIGN_ENTITLEMENTS: SimpTradKeyboard/SimpTradKeyboard.entitlements
+        GENERATE_INFOPLIST_FILE: "NO"
+        TARGETED_DEVICE_FAMILY: "1"
+
+  SimpTradKeyboardExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: SimpTradKeyboardExtension
+    dependencies:
+      - package: KeyboardCore
+    info:
+      path: SimpTradKeyboardExtension/Info.plist
+      properties:
+        CFBundleDisplayName: SimpTradKeyboard
+        NSExtension:
+          NSExtensionAttributes:
+            IsASCIICapable: false
+            PrefersRightToLeft: false
+            PrimaryLanguage: zh-Hant
+            RequestsOpenAccess: false
+          NSExtensionPointIdentifier: com.apple.keyboard-service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).KeyboardViewController
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.qqna.simptradkeyboard.keyboard
+        CODE_SIGN_ENTITLEMENTS: SimpTradKeyboardExtension/SimpTradKeyboardExtension.entitlements
+        GENERATE_INFOPLIST_FILE: "NO"
+        TARGETED_DEVICE_FAMILY: "1"
