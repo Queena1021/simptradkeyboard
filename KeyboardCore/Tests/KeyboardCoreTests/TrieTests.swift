@@ -27,4 +27,18 @@ final class TrieTests: XCTestCase {
         trie.insert(key: "ap", candidate: Candidate(text: "曰", frequency: 1, source: .builtin))
         XCTAssertEqual(trie.lookup(key: "a"), [])
     }
+
+    func test_serialize_roundTrip() throws {
+        var trie = Trie()
+        trie.insert(key: "a", candidate: Candidate(text: "日", frequency: 9999, source: .builtin))
+        trie.insert(key: "a", candidate: Candidate(text: "曰", frequency: 10, source: .builtin))
+        trie.insert(key: "hqm", candidate: Candidate(text: "拜", frequency: 500, source: .builtin))
+
+        let data = try trie.encode()
+        let decoded = try Trie.decode(from: data)
+
+        XCTAssertEqual(decoded.lookup(key: "a").map(\.text), ["日", "曰"])
+        XCTAssertEqual(decoded.lookup(key: "hqm").map(\.text), ["拜"])
+        XCTAssertEqual(decoded.lookup(key: "zzz"), [])
+    }
 }
