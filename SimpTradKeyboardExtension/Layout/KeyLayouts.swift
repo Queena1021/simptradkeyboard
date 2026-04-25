@@ -10,8 +10,6 @@ enum KeyKind: Equatable {
     case toggleChinese                           // switch back to Chinese layout
     case toggleSimpTrad                          // cycle simplified/traditional
     case globe                                   // advanceToNextInputMode
-    case emoji                                   // placeholder: does nothing in V1
-    case moreSymbols                             // #+= layer, V1 no-op
 }
 
 struct KeyRow {
@@ -56,7 +54,7 @@ enum KeyLayouts {
         ]),
         KeyRow(keys: [
             .toggleSymbols,
-            .emoji,
+            .globe,
             .space,
             .toggleSimpTrad,
             .return
@@ -73,11 +71,11 @@ enum KeyLayouts {
             .symbol(")"), .symbol("$"), .symbol("@"), .symbol("「"), .symbol("」")
         ]),
         KeyRow(keys: [
-            .moreSymbols, .symbol("。"), .symbol("，"), .symbol("、"), .symbol("?"),
-            .symbol("!"), .symbol("."), .delete
+            .symbol("。"), .symbol("，"), .symbol("、"), .symbol("？"),
+            .symbol("！"), .symbol("．"), .delete
         ]),
         KeyRow(keys: [
-            .toggleChinese, .emoji, .space, .return
+            .toggleChinese, .globe, .space, .return
         ])
     ]
 }

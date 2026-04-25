@@ -9,6 +9,7 @@ Usage:
   build-trie trie <input.yaml> <freq.txt> <output.trie>
   build-trie quick-from-cangjie <cangjie.yaml> <freq.txt> <output.trie>
   build-trie opencc <input.txt> <output.json>
+  build-trie predictor <freq.txt> <output.json>
 
 freq.txt: rime essay format (one row per char or phrase, "<text>\\t<weight>")
 
@@ -94,6 +95,8 @@ case "quick-from-cangjie":
     print("Wrote \(count) entries (\(data.count) bytes) to \(outputPath)")
 case "opencc":
     try OpenCCBuilder.buildDict(from: args[2], to: args[3])
+case "predictor":
+    try NextCharBuilder.build(from: args[2], to: args[3])
 default:
     usage()
 }

@@ -28,7 +28,9 @@ final class KeyboardViewController: UIInputViewController {
     private var inputEngine: InputEngine?
     private var convertEngine: ConvertEngine?
     private var learningStore: LearningStore?
+    private var predictor: NextCharPredictor?
     private var settings: Settings = .shared()
+    private var lastCommittedChar: String = ""    // for showing predictions after commit
 
     private var composingBuffer: String = ""        // raw codes typed (e.g. "of")
     private var composingDisplay: String = ""       // radical labels shown in document (e.g. "人火")
@@ -44,6 +46,9 @@ final class KeyboardViewController: UIInputViewController {
         let original: Candidate    // traditional (trie source)
     }
     private var currentCandidates: [DisplayedCandidate] = []
+    private var currentPredictions: [String] = []
+    private enum BarMode { case candidates, predictions, empty }
+    private var barMode: BarMode = .empty
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -56,13 +61,23 @@ final class KeyboardViewController: UIInputViewController {
             candidateBar.heightAnchor.constraint(equalToConstant: 40)
         ])
         candidateBar.onSelect = { [weak self] cand in
-            self?.selectCandidate(cand)
+            guard let self else { return }
+            switch self.barMode {
+            case .candidates: self.selectCandidate(cand)
+            case .predictions: self.selectPrediction(cand.text)
+            case .empty: break
+            }
         }
         candidateBar.onToggleExpand = { [weak self] in
             self?.toggleExpanded()
         }
         candidateGrid.onSelect = { [weak self] cand in
-            self?.selectCandidate(cand)
+            guard let self else { return }
+            switch self.barMode {
+            case .candidates: self.selectCandidate(cand)
+            case .predictions: self.selectPrediction(cand.text)
+            case .empty: break
+            }
         }
         candidateGrid.isHidden = true
         rebuildKeyboard()
@@ -85,6 +100,7 @@ final class KeyboardViewController: UIInputViewController {
         do {
             inputEngine = try InputEngine.loadFromBundle()
             convertEngine = try ConvertEngine.loadFromBundle()
+            predictor = try? NextCharPredictor.loadFromBundle()
             if let url = AppGroup.learningDBURL() {
                 learningStore = try? LearningStore(path: url.path)
             }
@@ -179,8 +195,6 @@ final class KeyboardViewController: UIInputViewController {
         case .globe:
             commitFirstCandidate()
             advanceToNextInputMode()
-        case .emoji, .moreSymbols:
-            break
         }
     }
 
@@ -227,6 +241,34 @@ final class KeyboardViewController: UIInputViewController {
         }
         candidateBar.show(displayed)
         candidateGrid.show(displayed)
+        barMode = displayed.isEmpty ? .empty : .candidates
+    }
+
+    private func showPredictions(after committed: String) {
+        guard let predictor = predictor, !committed.isEmpty else {
+            candidateBar.clear()
+            candidateGrid.show([])
+            barMode = .empty
+            return
+        }
+        // Use last single character of committed text as prefix.
+        let prefix = String(committed.suffix(1))
+        let mode = settings.outputMode
+        let suggestions = predictor.suggestions(after: prefix)
+            .map { convertEngine?.convert($0, to: mode) ?? $0 }
+            .filter { systemCanRender($0) }
+        let cands = suggestions.map { Candidate(text: $0, frequency: 0, source: .builtin) }
+        candidateBar.show(cands)
+        candidateGrid.show(cands)
+        barMode = cands.isEmpty ? .empty : .predictions
+        currentPredictions = suggestions
+    }
+
+    private func selectPrediction(_ char: String) {
+        textDocumentProxy.insertText(char)
+        lastCommittedChar = char
+        showPredictions(after: char)
+        collapseGridIfNeeded()
     }
 
     private func collapseGridIfNeeded() {
@@ -244,8 +286,9 @@ final class KeyboardViewController: UIInputViewController {
         textDocumentProxy.insertText(dc.display)
         learningStore?.recordSelection(code: composingBuffer, candidate: dc.original.text)
         composingBuffer = ""
-        candidateBar.clear()
         currentCandidates = []
+        lastCommittedChar = dc.display
+        showPredictions(after: dc.display)
         collapseGridIfNeeded()
     }
 
@@ -254,6 +297,7 @@ final class KeyboardViewController: UIInputViewController {
             clearComposingDisplay()
             composingBuffer = ""
             candidateBar.clear()
+            barMode = .empty
             collapseGridIfNeeded()
             return
         }
@@ -261,8 +305,9 @@ final class KeyboardViewController: UIInputViewController {
         textDocumentProxy.insertText(first.display)
         learningStore?.recordSelection(code: composingBuffer, candidate: first.original.text)
         composingBuffer = ""
-        candidateBar.clear()
         currentCandidates = []
+        lastCommittedChar = first.display
+        showPredictions(after: first.display)
         collapseGridIfNeeded()
     }
 }
