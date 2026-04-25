@@ -5,8 +5,9 @@ final class CandidateGridView: UIView {
     var onSelect: ((Candidate) -> Void)?
 
     private let scroll = UIScrollView()
-    private let container = UIView()
+    private let rowsStack = UIStackView()
     private var candidates: [Candidate] = []
+    private var lastLayoutWidth: CGFloat = 0
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -21,96 +22,89 @@ final class CandidateGridView: UIView {
         scroll.translatesAutoresizingMaskIntoConstraints = false
         scroll.showsVerticalScrollIndicator = true
         addSubview(scroll)
-        container.translatesAutoresizingMaskIntoConstraints = false
-        scroll.addSubview(container)
+
+        rowsStack.axis = .vertical
+        rowsStack.spacing = 0
+        rowsStack.alignment = .fill
+        rowsStack.distribution = .fill
+        rowsStack.translatesAutoresizingMaskIntoConstraints = false
+        scroll.addSubview(rowsStack)
 
         NSLayoutConstraint.activate([
             scroll.leadingAnchor.constraint(equalTo: leadingAnchor),
             scroll.trailingAnchor.constraint(equalTo: trailingAnchor),
             scroll.topAnchor.constraint(equalTo: topAnchor),
             scroll.bottomAnchor.constraint(equalTo: bottomAnchor),
-            container.leadingAnchor.constraint(equalTo: scroll.leadingAnchor),
-            container.trailingAnchor.constraint(equalTo: scroll.trailingAnchor),
-            container.topAnchor.constraint(equalTo: scroll.topAnchor),
-            container.bottomAnchor.constraint(equalTo: scroll.bottomAnchor),
-            container.widthAnchor.constraint(equalTo: scroll.widthAnchor)
+            rowsStack.leadingAnchor.constraint(equalTo: scroll.leadingAnchor),
+            rowsStack.trailingAnchor.constraint(equalTo: scroll.trailingAnchor),
+            rowsStack.topAnchor.constraint(equalTo: scroll.topAnchor),
+            rowsStack.bottomAnchor.constraint(equalTo: scroll.bottomAnchor),
+            rowsStack.widthAnchor.constraint(equalTo: scroll.widthAnchor)
         ])
     }
 
     func show(_ candidates: [Candidate]) {
         self.candidates = candidates
-        container.subviews.forEach { $0.removeFromSuperview() }
-        layoutGrid()
+        rebuildIfNeeded(force: true)
     }
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        if container.bounds.width > 0 && !candidates.isEmpty && container.subviews.isEmpty {
-            layoutGrid()
-        }
+        rebuildIfNeeded(force: false)
     }
 
-    private func layoutGrid() {
-        let availableWidth = bounds.width
-        guard availableWidth > 0 else { return }
+    private func rebuildIfNeeded(force: Bool) {
+        let width = bounds.width
+        guard width > 0 else { return }
+        if !force && abs(width - lastLayoutWidth) < 0.5 { return }
+        lastLayoutWidth = width
+        rowsStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
 
-        let columns: CGFloat = 5
-        let spacing: CGFloat = 4
-        let cellWidth = (availableWidth - spacing * (columns + 1)) / columns
+        let columns = 7
         let cellHeight: CGFloat = 44
+        let separatorColor = UIColor.separator.withAlphaComponent(0.3)
 
-        var currentRow: UIStackView?
-        var rowsStack = UIStackView()
-        rowsStack.axis = .vertical
-        rowsStack.spacing = spacing
-        rowsStack.alignment = .leading
-        rowsStack.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(rowsStack)
+        for chunkStart in stride(from: 0, to: candidates.count, by: columns) {
+            let row = UIStackView()
+            row.axis = .horizontal
+            row.spacing = 0
+            row.distribution = .fillEqually
+            row.alignment = .fill
 
-        NSLayoutConstraint.activate([
-            rowsStack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: spacing),
-            rowsStack.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -spacing),
-            rowsStack.topAnchor.constraint(equalTo: container.topAnchor, constant: spacing),
-            rowsStack.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -spacing)
-        ])
-
-        for (idx, c) in candidates.enumerated() {
-            if idx % Int(columns) == 0 {
-                let row = UIStackView()
-                row.axis = .horizontal
-                row.spacing = spacing
-                row.distribution = .fillEqually
-                rowsStack.addArrangedSubview(row)
-                currentRow = row
+            let end = min(chunkStart + columns, candidates.count)
+            for i in chunkStart..<end {
+                row.addArrangedSubview(makeCell(for: candidates[i]))
             }
-            let btn = makeButton(for: c, height: cellHeight)
-            currentRow?.addArrangedSubview(btn)
-        }
-        // Pad final row with empty spacers so cells stay equal width
-        if let last = currentRow {
-            let remainder = candidates.count % Int(columns)
-            if remainder != 0 {
-                for _ in 0..<(Int(columns) - remainder) {
-                    let spacer = UIView()
-                    last.addArrangedSubview(spacer)
-                }
+            // Pad final row with empty spacers so cell widths stay equal
+            for _ in end..<(chunkStart + columns) {
+                let spacer = UIView()
+                spacer.backgroundColor = .clear
+                row.addArrangedSubview(spacer)
             }
-        }
-        // Fixed-height rows
-        rowsStack.arrangedSubviews.compactMap { $0 as? UIStackView }.forEach { row in
             row.heightAnchor.constraint(equalToConstant: cellHeight).isActive = true
+
+            // Bottom hairline separator between rows
+            let separator = UIView()
+            separator.backgroundColor = separatorColor
+            separator.translatesAutoresizingMaskIntoConstraints = false
+            row.addSubview(separator)
+            NSLayoutConstraint.activate([
+                separator.leadingAnchor.constraint(equalTo: row.leadingAnchor),
+                separator.trailingAnchor.constraint(equalTo: row.trailingAnchor),
+                separator.bottomAnchor.constraint(equalTo: row.bottomAnchor),
+                separator.heightAnchor.constraint(equalToConstant: 0.5)
+            ])
+
+            rowsStack.addArrangedSubview(row)
         }
-        _ = cellWidth
     }
 
-    private func makeButton(for c: Candidate, height: CGFloat) -> UIButton {
+    private func makeCell(for c: Candidate) -> UIButton {
         let btn = UIButton(type: .system)
         btn.setTitle(c.text, for: .normal)
         btn.titleLabel?.font = .systemFont(ofSize: 22)
         btn.setTitleColor(.label, for: .normal)
-        btn.backgroundColor = UIColor.systemGray5.withAlphaComponent(0.5)
-        btn.layer.cornerRadius = 6
-        btn.heightAnchor.constraint(equalToConstant: height).isActive = true
+        btn.backgroundColor = .clear
         btn.addAction(UIAction { [weak self] _ in self?.onSelect?(c) }, for: .touchUpInside)
         return btn
     }

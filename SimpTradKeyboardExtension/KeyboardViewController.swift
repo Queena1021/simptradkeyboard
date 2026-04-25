@@ -1,5 +1,28 @@
 import UIKit
+import CoreText
 import KeyboardCore
+
+/// True if the system font has a glyph for every scalar in `text`. Drops candidates
+/// rendered as ☐ (CJK extension chars not in the iOS system font).
+private func systemCanRender(_ text: String) -> Bool {
+    let font = CTFontCreateWithName("PingFangTC-Regular" as CFString, 22, nil)
+    let scalars = Array(text.unicodeScalars)
+    var utf16: [UniChar] = []
+    for s in scalars {
+        if s.value > 0xFFFF {
+            // Surrogate pair
+            let v = s.value - 0x10000
+            utf16.append(UniChar(0xD800 + (v >> 10)))
+            utf16.append(UniChar(0xDC00 + (v & 0x3FF)))
+        } else {
+            utf16.append(UniChar(s.value))
+        }
+    }
+    var glyphs = [CGGlyph](repeating: 0, count: utf16.count)
+    let ok = CTFontGetGlyphsForCharacters(font, utf16, &glyphs, utf16.count)
+    if !ok { return false }
+    return glyphs.allSatisfy { $0 != 0 }
+}
 
 final class KeyboardViewController: UIInputViewController {
     private var inputEngine: InputEngine?
@@ -191,9 +214,9 @@ final class KeyboardViewController: UIInputViewController {
         }
 
         let mode = settings.outputMode
-        currentCandidates = raw.map {
-            DisplayedCandidate(display: converter.convert($0.text, to: mode), original: $0)
-        }
+        currentCandidates = raw
+            .filter { systemCanRender($0.text) }
+            .map { DisplayedCandidate(display: converter.convert($0.text, to: mode), original: $0) }
         let displayed = currentCandidates.map {
             Candidate(text: $0.display, frequency: $0.original.frequency, source: $0.original.source)
         }
