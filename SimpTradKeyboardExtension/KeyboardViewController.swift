@@ -209,7 +209,7 @@ final class KeyboardViewController: UIInputViewController {
             settings.outputMode = (settings.outputMode == .simplified) ? .traditional : .simplified
             keyboardView?.updateSimpTradToggle(showing: settings.outputMode == .simplified ? "简" : "繁")
             refreshCandidates()
-        case .globe:
+        case .globe, .emoji:
             commitFirstCandidate()
             advanceToNextInputMode()
         }

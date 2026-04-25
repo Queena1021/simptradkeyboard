@@ -68,6 +68,9 @@ final class KeyButton: UIButton {
         case .globe:
             backgroundColor = UIColor.systemGray4.withAlphaComponent(0.6)
             setTitle("🌐", for: .normal)
+        case .emoji:
+            backgroundColor = UIColor.systemGray4.withAlphaComponent(0.6)
+            setTitle("😀", for: .normal)
         }
     }
 
