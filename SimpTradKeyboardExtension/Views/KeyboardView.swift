@@ -67,7 +67,7 @@ final class KeyboardView: UIView {
         switch kind {
         case .space: return 4.0
         case .return: return 1.6
-        case .delete, .toggleSymbols, .toggleMoreSymbols, .toggleChinese, .toggleSimpTrad, .emoji, .globe: return 1.4
+        case .delete, .toggleSymbols, .toggleMoreSymbols, .toggleChinese, .toggleSimpTrad, .globe: return 1.4
         default: return 1.0
         }
     }
