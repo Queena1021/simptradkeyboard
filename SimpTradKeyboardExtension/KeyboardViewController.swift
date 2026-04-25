@@ -7,7 +7,8 @@ final class KeyboardViewController: UIInputViewController {
     private var learningStore: LearningStore?
     private var settings: Settings = .shared()
 
-    private var composingBuffer: String = ""
+    private var composingBuffer: String = ""        // raw codes typed (e.g. "of")
+    private var composingDisplay: String = ""       // radical labels shown in document (e.g. "人火")
     private enum LayoutMode { case chinese, symbols }
     private var layoutMode: LayoutMode = .chinese
     private var keyboardView: KeyboardView?
@@ -80,8 +81,10 @@ final class KeyboardViewController: UIInputViewController {
 
     private func handleKey(_ key: KeyKind) {
         switch key {
-        case .code(let k, _):
+        case .code(let k, let label):
             composingBuffer += k
+            composingDisplay += label
+            textDocumentProxy.insertText(label)
             refreshCandidates()
         case .symbol(let s):
             commitFirstCandidate()
@@ -89,6 +92,8 @@ final class KeyboardViewController: UIInputViewController {
         case .delete:
             if !composingBuffer.isEmpty {
                 composingBuffer.removeLast()
+                composingDisplay.removeLast()
+                textDocumentProxy.deleteBackward()
                 refreshCandidates()
             } else {
                 textDocumentProxy.deleteBackward()
@@ -100,12 +105,17 @@ final class KeyboardViewController: UIInputViewController {
                 textDocumentProxy.insertText(" ")
             }
         case .return:
-            commitFirstCandidate()
-            textDocumentProxy.insertText("\n")
+            if !composingBuffer.isEmpty {
+                commitFirstCandidate()
+            } else {
+                textDocumentProxy.insertText("\n")
+            }
         case .toggleSymbols:
+            commitFirstCandidate()
             layoutMode = .symbols
             rebuildKeyboard()
         case .toggleChinese:
+            commitFirstCandidate()
             layoutMode = .chinese
             rebuildKeyboard()
         case .toggleSimpTrad:
@@ -113,10 +123,19 @@ final class KeyboardViewController: UIInputViewController {
             keyboardView?.updateSimpTradToggle(showing: settings.outputMode == .simplified ? "简" : "繁")
             refreshCandidates()
         case .globe:
+            commitFirstCandidate()
             advanceToNextInputMode()
         case .emoji, .moreSymbols:
             break
         }
+    }
+
+    /// Remove the radical placeholders we inserted into the document during composing.
+    private func clearComposingDisplay() {
+        for _ in 0..<composingDisplay.count {
+            textDocumentProxy.deleteBackward()
+        }
+        composingDisplay = ""
     }
 
     private func refreshCandidates() {
@@ -150,6 +169,7 @@ final class KeyboardViewController: UIInputViewController {
     private func selectCandidate(_ displayed: Candidate) {
         // Candidate passed to the bar carries the `display` text; we find matching DisplayedCandidate
         guard let dc = currentCandidates.first(where: { $0.display == displayed.text }) else { return }
+        clearComposingDisplay()
         textDocumentProxy.insertText(dc.display)
         learningStore?.recordSelection(code: composingBuffer, candidate: dc.original.text)
         composingBuffer = ""
@@ -159,10 +179,12 @@ final class KeyboardViewController: UIInputViewController {
 
     private func commitFirstCandidate() {
         guard let first = currentCandidates.first else {
+            clearComposingDisplay()
             composingBuffer = ""
             candidateBar.clear()
             return
         }
+        clearComposingDisplay()
         textDocumentProxy.insertText(first.display)
         learningStore?.recordSelection(code: composingBuffer, candidate: first.original.text)
         composingBuffer = ""
