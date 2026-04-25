@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  keyboard-core:
+    name: KeyboardCore swift test
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test
+        run: cd KeyboardCore && swift test
+
+  xcode-build:
+    name: Xcode build app + extension
+    runs-on: macos-14
+    needs: keyboard-core
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install xcodegen
+        run: brew install xcodegen
+      - name: Generate xcodeproj
+        run: xcodegen generate
+      - name: Build
+        run: xcodebuild -project SimpTradKeyboard.xcodeproj -scheme SimpTradKeyboard -destination 'generic/platform=iOS Simulator' -skipPackagePluginValidation -configuration Debug CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
