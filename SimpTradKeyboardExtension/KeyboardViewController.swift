@@ -33,6 +33,7 @@ final class KeyboardViewController: UIInputViewController {
     private var lastCommittedChar: String = ""    // for showing predictions after commit
 
     private var composingBuffer: String = ""        // raw codes typed (e.g. "of")
+    private var composingDisplay: String = ""       // radical labels for preview (e.g. "人火")
     private enum LayoutMode { case chinese, symbols, moreSymbols }
     private var layoutMode: LayoutMode = .chinese
     private var keyboardView: KeyboardView?
@@ -159,13 +160,14 @@ final class KeyboardViewController: UIInputViewController {
 
     private func handleKey(_ key: KeyKind) {
         switch key {
-        case .code(let k, _):
+        case .code(let k, let label):
             // If buffer already at max for this IME mode, auto-commit first
             // candidate before starting a new buffer with this keystroke.
             if composingBuffer.count >= maxBufferLength {
                 commitFirstCandidate()
             }
             composingBuffer += k
+            composingDisplay += label
             refreshCandidates()
         case .symbol(let s):
             commitFirstCandidate()
@@ -173,6 +175,7 @@ final class KeyboardViewController: UIInputViewController {
         case .delete:
             if !composingBuffer.isEmpty {
                 composingBuffer.removeLast()
+                composingDisplay.removeLast()
                 refreshCandidates()
             } else {
                 textDocumentProxy.deleteBackward()
@@ -245,7 +248,7 @@ final class KeyboardViewController: UIInputViewController {
         let displayed = currentCandidates.map {
             Candidate(text: $0.display, frequency: $0.original.frequency, source: $0.original.source)
         }
-        candidateBar.show(displayed)
+        candidateBar.show(displayed, composing: composingDisplay)
         candidateGrid.show(displayed)
         barMode = displayed.isEmpty ? .empty : .candidates
     }
@@ -294,6 +297,7 @@ final class KeyboardViewController: UIInputViewController {
         textDocumentProxy.insertText(dc.display)
         learningStore?.recordSelection(code: composingBuffer, candidate: dc.original.text)
         composingBuffer = ""
+        composingDisplay = ""
         currentCandidates = []
         lastCommittedChar = dc.display
         showPredictions(after: dc.display)
@@ -303,6 +307,7 @@ final class KeyboardViewController: UIInputViewController {
     private func commitFirstCandidate() {
         guard let first = currentCandidates.first else {
             composingBuffer = ""
+            composingDisplay = ""
             candidateBar.clear()
             barMode = .empty
             collapseGridIfNeeded()
@@ -311,6 +316,7 @@ final class KeyboardViewController: UIInputViewController {
         textDocumentProxy.insertText(first.display)
         learningStore?.recordSelection(code: composingBuffer, candidate: first.original.text)
         composingBuffer = ""
+        composingDisplay = ""
         currentCandidates = []
         lastCommittedChar = first.display
         showPredictions(after: first.display)

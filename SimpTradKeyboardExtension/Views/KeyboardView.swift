@@ -50,10 +50,12 @@ final class KeyboardView: UIView {
                 buttons.append(btn)
                 rowButtons.append(btn)
             }
-            // Set width-weight constraints relative to the first 1×-weight button in the row.
-            if let unitButton = rowButtons.first(where: { weight(for: $0.kind) == 1 }) {
+            // Set width-weight constraints relative to whichever button in
+            // the row has the smallest weight (treated as 1× for that row).
+            if let unitButton = rowButtons.min(by: { weight(for: $0.kind) < weight(for: $1.kind) }) {
+                let unitW = weight(for: unitButton.kind)
                 for btn in rowButtons where btn !== unitButton {
-                    let w = weight(for: btn.kind)
+                    let w = weight(for: btn.kind) / unitW
                     btn.widthAnchor.constraint(equalTo: unitButton.widthAnchor, multiplier: CGFloat(w)).isActive = true
                 }
             }
