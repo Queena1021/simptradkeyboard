@@ -9,7 +9,7 @@ Usage:
   build-trie trie <input.yaml> <freq.txt> <output.trie>
   build-trie quick-from-cangjie <cangjie.yaml> <freq.txt> <output.trie>
   build-trie opencc <input.txt> <output.json>
-  build-trie predictor <freq.txt> <output.json>
+  build-trie predictor <output.json> <freq1.txt> [<freq2.txt> ...]
 
 freq.txt: rime essay format (one row per char or phrase, "<text>\\t<weight>")
 
@@ -96,7 +96,10 @@ case "quick-from-cangjie":
 case "opencc":
     try OpenCCBuilder.buildDict(from: args[2], to: args[3])
 case "predictor":
-    try NextCharBuilder.build(from: args[2], to: args[3])
+    guard args.count >= 4 else { usage() }
+    let outputPath = args[2]
+    let inputs = Array(args.dropFirst(3))
+    try NextCharBuilder.build(from: inputs, to: outputPath)
 default:
     usage()
 }
