@@ -36,4 +36,21 @@ final class ConvertEngineTests: XCTestCase {
     func test_convert_empty() {
         XCTAssertEqual(engine.convert("", to: .simplified), "")
     }
+
+    struct ConversionPair: Decodable {
+        let traditional: String
+        let simplified: String
+    }
+
+    func test_golden_conversionFixtures() throws {
+        let url = try XCTUnwrap(Bundle.module.url(forResource: "conversion_fixtures", withExtension: "json"))
+        let data = try Data(contentsOf: url)
+        let pairs = try JSONDecoder().decode([ConversionPair].self, from: data)
+        XCTAssertFalse(pairs.isEmpty)
+        for p in pairs {
+            XCTAssertEqual(engine.convert(p.traditional, to: .simplified),
+                           p.simplified,
+                           "T→S failure for \(p.traditional)")
+        }
+    }
 }
