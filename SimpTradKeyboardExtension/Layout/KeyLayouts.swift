@@ -6,7 +6,8 @@ enum KeyKind: Equatable {
     case delete
     case space
     case `return`
-    case toggleSymbols                           // switch to number/symbol layout
+    case toggleSymbols                           // switch to number/symbol layout (123)
+    case toggleMoreSymbols                       // switch to extended symbol layout (#+=)
     case toggleChinese                           // switch back to Chinese layout
     case toggleSimpTrad                          // cycle simplified/traditional
     case globe                                   // advanceToNextInputMode
@@ -71,8 +72,28 @@ enum KeyLayouts {
             .symbol(")"), .symbol("$"), .symbol("@"), .symbol("「"), .symbol("」")
         ]),
         KeyRow(keys: [
+            .toggleMoreSymbols,
             .symbol("。"), .symbol("，"), .symbol("、"), .symbol("？"),
             .symbol("！"), .symbol("．"), .delete
+        ]),
+        KeyRow(keys: [
+            .toggleChinese, .globe, .space, .return
+        ])
+    ]
+
+    static let moreSymbolRows: [KeyRow] = [
+        KeyRow(keys: [
+            .symbol("["), .symbol("]"), .symbol("{"), .symbol("}"), .symbol("#"),
+            .symbol("%"), .symbol("^"), .symbol("*"), .symbol("+"), .symbol("=")
+        ]),
+        KeyRow(keys: [
+            .symbol("_"), .symbol("\\"), .symbol("|"), .symbol("~"), .symbol("<"),
+            .symbol(">"), .symbol("¥"), .symbol("€"), .symbol("£"), .symbol("·")
+        ]),
+        KeyRow(keys: [
+            .toggleSymbols,
+            .symbol("."), .symbol(","), .symbol("?"), .symbol("!"),
+            .symbol("'"), .delete
         ]),
         KeyRow(keys: [
             .toggleChinese, .globe, .space, .return

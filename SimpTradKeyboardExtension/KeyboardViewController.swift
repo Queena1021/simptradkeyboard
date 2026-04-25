@@ -34,7 +34,7 @@ final class KeyboardViewController: UIInputViewController {
 
     private var composingBuffer: String = ""        // raw codes typed (e.g. "of")
     private var composingDisplay: String = ""       // radical labels shown in document (e.g. "人火")
-    private enum LayoutMode { case chinese, symbols }
+    private enum LayoutMode { case chinese, symbols, moreSymbols }
     private var layoutMode: LayoutMode = .chinese
     private var keyboardView: KeyboardView?
     private let candidateBar = CandidateBar()
@@ -111,7 +111,12 @@ final class KeyboardViewController: UIInputViewController {
 
     private func rebuildKeyboard() {
         keyboardView?.removeFromSuperview()
-        let rows: [KeyRow] = (layoutMode == .chinese) ? KeyLayouts.chineseRows : KeyLayouts.symbolRows
+        let rows: [KeyRow]
+        switch layoutMode {
+        case .chinese: rows = KeyLayouts.chineseRows
+        case .symbols: rows = KeyLayouts.symbolRows
+        case .moreSymbols: rows = KeyLayouts.moreSymbolRows
+        }
         let view = KeyboardView(rows: rows)
         view.onKeyTap = { [weak self] in self?.handleKey($0) }
         view.onDeleteRepeat = { [weak self] in self?.handleKey(.delete) }
@@ -182,7 +187,12 @@ final class KeyboardViewController: UIInputViewController {
             }
         case .toggleSymbols:
             commitFirstCandidate()
-            layoutMode = .symbols
+            // From #+= layer, "123" goes back to numbers; otherwise enter numbers.
+            layoutMode = (layoutMode == .moreSymbols) ? .symbols : .symbols
+            rebuildKeyboard()
+        case .toggleMoreSymbols:
+            commitFirstCandidate()
+            layoutMode = .moreSymbols
             rebuildKeyboard()
         case .toggleChinese:
             commitFirstCandidate()
@@ -251,10 +261,13 @@ final class KeyboardViewController: UIInputViewController {
             barMode = .empty
             return
         }
-        // Use last single character of committed text as prefix.
-        let prefix = String(committed.suffix(1))
+        // Predictor table is keyed on Simplified chars. Normalize the prefix to
+        // Simplified before lookup so traditional input (e.g. "頭") still finds
+        // the simplified entry ("头").
+        let rawPrefix = String(committed.suffix(1))
+        let normalized = convertEngine?.convert(rawPrefix, to: .simplified) ?? rawPrefix
         let mode = settings.outputMode
-        let suggestions = predictor.suggestions(after: prefix)
+        let suggestions = predictor.suggestions(after: normalized)
             .map { convertEngine?.convert($0, to: mode) ?? $0 }
             .filter { systemCanRender($0) }
         let cands = suggestions.map { Candidate(text: $0, frequency: 0, source: .builtin) }

@@ -1,10 +1,14 @@
 import Foundation
 
 enum NextCharBuilder {
-    /// Build a JSON dict mapping each first char to top-N next chars by frequency,
-    /// derived from one or more rime-essay-format phrase corpora.
-    /// Output format: { "我": ["們", "的", "是", ...], ... }
-    static func build(from inputPaths: [String], to outputPath: String, topN: Int = 12) throws {
+    /// Build a JSON dict mapping each first char (Simplified) to top-N next
+    /// chars (Simplified) by frequency, derived from rime-essay-format corpora.
+    /// All keys/values are normalized to Simplified using OpenCC TSCharacters
+    /// so the runtime can look up by either traditional or simplified prefix
+    /// after a single T→S conversion step.
+    static func build(from inputPaths: [String], to outputPath: String, charsTSV: String, topN: Int = 12) throws {
+        let t2s = try loadCharMap(charsTSV)
+
         var counts: [Character: [Character: Int]] = [:]
 
         for path in inputPaths {
@@ -17,8 +21,8 @@ enum NextCharBuilder {
                 guard let weight = Int(parts[1]) else { continue }
                 guard weight > 0 else { continue }
                 let chars = Array(text)
-                let first = chars[0]
-                let second = chars[1]
+                let first = normalize(chars[0], with: t2s)
+                let second = normalize(chars[1], with: t2s)
                 guard isCJK(first) && isCJK(second) else { continue }
                 counts[first, default: [:]][second, default: 0] += weight
             }
@@ -35,6 +39,24 @@ enum NextCharBuilder {
         let data = try JSONEncoder().encode(result)
         try data.write(to: URL(fileURLWithPath: outputPath))
         print("Wrote \(result.count) prefix entries (\(data.count) bytes) to \(outputPath)")
+    }
+
+    private static func loadCharMap(_ path: String) throws -> [Character: Character] {
+        let content = try String(contentsOfFile: path, encoding: .utf8)
+        var dict: [Character: Character] = [:]
+        for line in content.split(separator: "\n") {
+            let parts = line.split(separator: "\t")
+            guard parts.count == 2 else { continue }
+            let trad = String(parts[0])
+            let simpFirst = parts[1].split(separator: " ").first.map(String.init) ?? ""
+            guard let t = trad.first, let s = simpFirst.first, trad.count == 1 else { continue }
+            dict[t] = s
+        }
+        return dict
+    }
+
+    private static func normalize(_ c: Character, with map: [Character: Character]) -> Character {
+        return map[c] ?? c
     }
 
     private static func isCJK(_ c: Character) -> Bool {

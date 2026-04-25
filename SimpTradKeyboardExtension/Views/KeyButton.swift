@@ -56,6 +56,9 @@ final class KeyButton: UIButton {
         case .toggleSymbols:
             backgroundColor = UIColor.systemGray4.withAlphaComponent(0.6)
             setTitle("123", for: .normal)
+        case .toggleMoreSymbols:
+            backgroundColor = UIColor.systemGray4.withAlphaComponent(0.6)
+            setTitle("#+=", for: .normal)
         case .toggleChinese:
             backgroundColor = UIColor.systemGray4.withAlphaComponent(0.6)
             setTitle("速成", for: .normal)
