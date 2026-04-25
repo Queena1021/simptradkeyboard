@@ -55,7 +55,6 @@ enum KeyLayouts {
         ]),
         KeyRow(keys: [
             .toggleSymbols,
-            .globe,
             .space,
             .toggleSimpTrad,
             .return
@@ -77,7 +76,7 @@ enum KeyLayouts {
             .symbol("！"), .symbol("．"), .delete
         ]),
         KeyRow(keys: [
-            .toggleChinese, .globe, .space, .return
+            .toggleChinese, .space, .return
         ])
     ]
 
@@ -96,7 +95,7 @@ enum KeyLayouts {
             .symbol("'"), .delete
         ]),
         KeyRow(keys: [
-            .toggleChinese, .globe, .space, .return
+            .toggleChinese, .space, .return
         ])
     ]
 }

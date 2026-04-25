@@ -33,11 +33,9 @@ final class KeyboardViewController: UIInputViewController {
     private var lastCommittedChar: String = ""    // for showing predictions after commit
 
     private var composingBuffer: String = ""        // raw codes typed (e.g. "of")
-    private var composingDisplay: String = ""       // radical labels shown in document (e.g. "人火")
     private enum LayoutMode { case chinese, symbols, moreSymbols }
     private var layoutMode: LayoutMode = .chinese
     private var keyboardView: KeyboardView?
-    private let composingBar = ComposingBar()
     private let candidateBar = CandidateBar()
     private let candidateGrid = CandidateGridView()
     private var isExpanded = false
@@ -54,16 +52,11 @@ final class KeyboardViewController: UIInputViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         loadEngines()
-        view.addSubview(composingBar)
         view.addSubview(candidateBar)
         NSLayoutConstraint.activate([
-            composingBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            composingBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            composingBar.topAnchor.constraint(equalTo: view.topAnchor),
-            composingBar.heightAnchor.constraint(equalToConstant: 28),
             candidateBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             candidateBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            candidateBar.topAnchor.constraint(equalTo: composingBar.bottomAnchor),
+            candidateBar.topAnchor.constraint(equalTo: view.topAnchor),
             candidateBar.heightAnchor.constraint(equalToConstant: 40)
         ])
         candidateBar.onSelect = { [weak self] cand in
@@ -166,15 +159,13 @@ final class KeyboardViewController: UIInputViewController {
 
     private func handleKey(_ key: KeyKind) {
         switch key {
-        case .code(let k, let label):
+        case .code(let k, _):
             // If buffer already at max for this IME mode, auto-commit first
             // candidate before starting a new buffer with this keystroke.
             if composingBuffer.count >= maxBufferLength {
                 commitFirstCandidate()
             }
             composingBuffer += k
-            composingDisplay += label
-            composingBar.show(composingDisplay)
             refreshCandidates()
         case .symbol(let s):
             commitFirstCandidate()
@@ -182,8 +173,6 @@ final class KeyboardViewController: UIInputViewController {
         case .delete:
             if !composingBuffer.isEmpty {
                 composingBuffer.removeLast()
-                composingDisplay.removeLast()
-                composingBar.show(composingDisplay)
                 refreshCandidates()
             } else {
                 textDocumentProxy.deleteBackward()
@@ -221,11 +210,6 @@ final class KeyboardViewController: UIInputViewController {
             commitFirstCandidate()
             advanceToNextInputMode()
         }
-    }
-
-    private func clearComposing() {
-        composingDisplay = ""
-        composingBar.clear()
     }
 
     private func refreshCandidates() {
@@ -307,7 +291,6 @@ final class KeyboardViewController: UIInputViewController {
     private func selectCandidate(_ displayed: Candidate) {
         // Candidate passed to the bar carries the `display` text; we find matching DisplayedCandidate
         guard let dc = currentCandidates.first(where: { $0.display == displayed.text }) else { return }
-        clearComposing()
         textDocumentProxy.insertText(dc.display)
         learningStore?.recordSelection(code: composingBuffer, candidate: dc.original.text)
         composingBuffer = ""
@@ -319,14 +302,12 @@ final class KeyboardViewController: UIInputViewController {
 
     private func commitFirstCandidate() {
         guard let first = currentCandidates.first else {
-            clearComposing()
             composingBuffer = ""
             candidateBar.clear()
             barMode = .empty
             collapseGridIfNeeded()
             return
         }
-        clearComposing()
         textDocumentProxy.insertText(first.display)
         learningStore?.recordSelection(code: composingBuffer, candidate: first.original.text)
         composingBuffer = ""

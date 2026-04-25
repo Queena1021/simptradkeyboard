@@ -34,7 +34,9 @@ final class KeyboardView: UIView {
             let h = UIStackView()
             h.axis = .horizontal
             h.spacing = 6
-            h.distribution = .fillEqually
+            h.distribution = .fill
+            // Width weights — give space ~4× a normal key, return ~1.5×.
+            var rowButtons: [KeyButton] = []
             for key in row.keys {
                 let btn = KeyButton(kind: key)
                 btn.onTap = { [weak self] in self?.onKeyTap?(key) }
@@ -46,8 +48,25 @@ final class KeyboardView: UIView {
                 }
                 h.addArrangedSubview(btn)
                 buttons.append(btn)
+                rowButtons.append(btn)
+            }
+            // Set width-weight constraints relative to the first 1×-weight button in the row.
+            if let unitButton = rowButtons.first(where: { weight(for: $0.kind) == 1 }) {
+                for btn in rowButtons where btn !== unitButton {
+                    let w = weight(for: btn.kind)
+                    btn.widthAnchor.constraint(equalTo: unitButton.widthAnchor, multiplier: CGFloat(w)).isActive = true
+                }
             }
             vStack.addArrangedSubview(h)
+        }
+    }
+
+    private func weight(for kind: KeyKind) -> Double {
+        switch kind {
+        case .space: return 4.0
+        case .return: return 1.6
+        case .delete, .toggleSymbols, .toggleMoreSymbols, .toggleChinese, .toggleSimpTrad: return 1.4
+        default: return 1.0
         }
     }
 
