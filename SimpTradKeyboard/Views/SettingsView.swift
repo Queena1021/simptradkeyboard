@@ -43,10 +43,7 @@ struct SettingsView: View {
 
 #Preview { NavigationStack { SettingsView() } }
 
-// Stubs replaced by Task 7.2 and Task 7.3 respectively
-struct OnboardingView: View {
-    var body: some View { Text("Onboarding (Task 7.2)") }
-}
+// Stub replaced by Task 7.3
 struct LearningDataView: View {
     var body: some View { Text("Learning data (Task 7.3)") }
 }
