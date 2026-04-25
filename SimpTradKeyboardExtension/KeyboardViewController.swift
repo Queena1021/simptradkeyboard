@@ -59,6 +59,14 @@ final class KeyboardViewController: UIInputViewController {
         let view = KeyboardView(rows: rows)
         view.onKeyTap = { [weak self] in self?.handleKey($0) }
         view.onDeleteRepeat = { [weak self] in self?.handleKey(.delete) }
+        view.onSpacePan = { [weak self] delta in
+            guard let self else { return }
+            if delta > 0 {
+                for _ in 0..<delta { self.textDocumentProxy.adjustTextPosition(byCharacterOffset: 1) }
+            } else if delta < 0 {
+                for _ in 0..<(-delta) { self.textDocumentProxy.adjustTextPosition(byCharacterOffset: -1) }
+            }
+        }
         self.view.addSubview(view)
         NSLayoutConstraint.activate([
             view.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),

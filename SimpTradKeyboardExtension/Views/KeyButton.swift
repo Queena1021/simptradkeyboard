@@ -28,6 +28,11 @@ final class KeyButton: UIButton {
             longPress.minimumPressDuration = 0.3
             addGestureRecognizer(longPress)
         }
+
+        if case .space = kind {
+            let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
+            addGestureRecognizer(pan)
+        }
     }
 
     private func applyStyle() {
@@ -82,6 +87,27 @@ final class KeyButton: UIButton {
             repeatTimer?.invalidate()
             repeatTimer = nil
         default: break
+        }
+    }
+
+    var onPanDelta: ((Int) -> Void)?
+    private var panLastX: CGFloat = 0
+
+    @objc private func handlePan(_ g: UIPanGestureRecognizer) {
+        let t = g.translation(in: self)
+        switch g.state {
+        case .began:
+            panLastX = 0
+        case .changed:
+            let delta = t.x - panLastX
+            let step: CGFloat = 10  // pixels per char
+            if abs(delta) >= step {
+                let chars = Int(delta / step)
+                onPanDelta?(chars)
+                panLastX += CGFloat(chars) * step
+            }
+        default:
+            break
         }
     }
 

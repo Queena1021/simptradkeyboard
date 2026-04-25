@@ -3,6 +3,7 @@ import UIKit
 final class KeyboardView: UIView {
     var onKeyTap: ((KeyKind) -> Void)?
     var onDeleteRepeat: (() -> Void)?
+    var onSpacePan: ((Int) -> Void)?
 
     private var buttons: [KeyButton] = []
     private let vStack = UIStackView()
@@ -39,6 +40,9 @@ final class KeyboardView: UIView {
                 btn.onTap = { [weak self] in self?.onKeyTap?(key) }
                 if case .delete = key {
                     btn.onLongPressRepeat = { [weak self] in self?.onDeleteRepeat?() }
+                }
+                if case .space = key {
+                    btn.onPanDelta = { [weak self] delta in self?.onSpacePan?(delta) }
                 }
                 h.addArrangedSubview(btn)
                 buttons.append(btn)
