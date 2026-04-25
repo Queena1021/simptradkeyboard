@@ -13,6 +13,8 @@ final class KeyboardViewController: UIInputViewController {
     private var layoutMode: LayoutMode = .chinese
     private var keyboardView: KeyboardView?
     private let candidateBar = CandidateBar()
+    private let candidateGrid = CandidateGridView()
+    private var isExpanded = false
 
     private struct DisplayedCandidate {
         let display: String        // maybe simplified
@@ -33,7 +35,21 @@ final class KeyboardViewController: UIInputViewController {
         candidateBar.onSelect = { [weak self] cand in
             self?.selectCandidate(cand)
         }
+        candidateBar.onToggleExpand = { [weak self] in
+            self?.toggleExpanded()
+        }
+        candidateGrid.onSelect = { [weak self] cand in
+            self?.selectCandidate(cand)
+        }
+        candidateGrid.isHidden = true
         rebuildKeyboard()
+    }
+
+    private func toggleExpanded() {
+        isExpanded.toggle()
+        candidateBar.setExpanded(isExpanded)
+        candidateGrid.isHidden = !isExpanded
+        keyboardView?.isHidden = isExpanded
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -77,6 +93,21 @@ final class KeyboardViewController: UIInputViewController {
         ])
         keyboardView = view
         view.updateSimpTradToggle(showing: settings.outputMode == .simplified ? "简" : "繁")
+
+        // Mount the candidate grid above the keyboard view, occupying the same area.
+        if candidateGrid.superview == nil {
+            self.view.addSubview(candidateGrid)
+            NSLayoutConstraint.activate([
+                candidateGrid.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
+                candidateGrid.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
+                candidateGrid.topAnchor.constraint(equalTo: candidateBar.bottomAnchor),
+                candidateGrid.bottomAnchor.constraint(equalTo: self.view.bottomAnchor)
+            ])
+        } else {
+            self.view.bringSubviewToFront(candidateGrid)
+        }
+        candidateGrid.isHidden = !isExpanded
+        view.isHidden = isExpanded
     }
 
     private func handleKey(_ key: KeyKind) {
@@ -142,6 +173,8 @@ final class KeyboardViewController: UIInputViewController {
         guard !composingBuffer.isEmpty else {
             currentCandidates = []
             candidateBar.clear()
+            candidateGrid.show([])
+            collapseGridIfNeeded()
             return
         }
         guard let engine = inputEngine, let converter = convertEngine else { return }
@@ -161,9 +194,19 @@ final class KeyboardViewController: UIInputViewController {
         currentCandidates = raw.map {
             DisplayedCandidate(display: converter.convert($0.text, to: mode), original: $0)
         }
-        candidateBar.show(currentCandidates.map {
+        let displayed = currentCandidates.map {
             Candidate(text: $0.display, frequency: $0.original.frequency, source: $0.original.source)
-        })
+        }
+        candidateBar.show(displayed)
+        candidateGrid.show(displayed)
+    }
+
+    private func collapseGridIfNeeded() {
+        guard isExpanded else { return }
+        isExpanded = false
+        candidateBar.setExpanded(false)
+        candidateGrid.isHidden = true
+        keyboardView?.isHidden = false
     }
 
     private func selectCandidate(_ displayed: Candidate) {
@@ -175,6 +218,7 @@ final class KeyboardViewController: UIInputViewController {
         composingBuffer = ""
         candidateBar.clear()
         currentCandidates = []
+        collapseGridIfNeeded()
     }
 
     private func commitFirstCandidate() {
@@ -182,6 +226,7 @@ final class KeyboardViewController: UIInputViewController {
             clearComposingDisplay()
             composingBuffer = ""
             candidateBar.clear()
+            collapseGridIfNeeded()
             return
         }
         clearComposingDisplay()
@@ -190,5 +235,6 @@ final class KeyboardViewController: UIInputViewController {
         composingBuffer = ""
         candidateBar.clear()
         currentCandidates = []
+        collapseGridIfNeeded()
     }
 }
