@@ -214,9 +214,14 @@ final class KeyboardViewController: UIInputViewController {
         }
 
         let mode = settings.outputMode
+        var seenDisplay = Set<String>()
         currentCandidates = raw
             .filter { systemCanRender($0.text) }
-            .map { DisplayedCandidate(display: converter.convert($0.text, to: mode), original: $0) }
+            .compactMap { c -> DisplayedCandidate? in
+                let display = converter.convert(c.text, to: mode)
+                guard seenDisplay.insert(display).inserted else { return nil }
+                return DisplayedCandidate(display: display, original: c)
+            }
         let displayed = currentCandidates.map {
             Candidate(text: $0.display, frequency: $0.original.frequency, source: $0.original.source)
         }

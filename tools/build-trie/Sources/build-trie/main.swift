@@ -6,9 +6,11 @@ let args = CommandLine.arguments
 func usage() -> Never {
     FileHandle.standardError.write(Data("""
 Usage:
-  build-trie trie <input.yaml> <output.trie>
-  build-trie quick-from-cangjie <cangjie.yaml> <output.trie>
+  build-trie trie <input.yaml> <freq.txt> <output.trie>
+  build-trie quick-from-cangjie <cangjie.yaml> <freq.txt> <output.trie>
   build-trie opencc <input.txt> <output.json>
+
+freq.txt: rime essay format (one row per char or phrase, "<text>\\t<weight>")
 
 """.utf8))
     exit(2)
@@ -16,10 +18,29 @@ Usage:
 
 guard args.count >= 4 else { usage() }
 
+/// Load single-character frequencies from rime essay file. Returns
+/// [text: weight] for entries whose text is exactly one Unicode char.
+func loadCharFreq(_ path: String) throws -> [String: Int] {
+    let content = try String(contentsOfFile: path, encoding: .utf8)
+    var dict: [String: Int] = [:]
+    for line in content.split(separator: "\n", omittingEmptySubsequences: true) {
+        let parts = line.split(separator: "\t", omittingEmptySubsequences: false)
+        guard parts.count >= 2 else { continue }
+        let text = String(parts[0])
+        guard text.count == 1 else { continue }
+        guard let w = Int(parts[1]) else { continue }
+        dict[text] = w
+    }
+    return dict
+}
+
 switch args[1] {
 case "trie":
+    guard args.count >= 5 else { usage() }
     let inputPath = args[2]
-    let outputPath = args[3]
+    let freqPath = args[3]
+    let outputPath = args[4]
+    let freqDict = try loadCharFreq(freqPath)
     let content = try String(contentsOfFile: inputPath, encoding: .utf8)
     var inBody = false
     var trie = Trie()
@@ -32,7 +53,7 @@ case "trie":
         guard parts.count >= 2 else { continue }
         let text = String(parts[0])
         let code = String(parts[1])
-        let weight = parts.count >= 3 ? Int(parts[2]) ?? 0 : 0
+        let weight = freqDict[text] ?? 0
         trie.insert(key: code, candidate: Candidate(text: text, frequency: weight, source: .builtin))
         count += 1
     }
@@ -40,10 +61,11 @@ case "trie":
     try data.write(to: URL(fileURLWithPath: outputPath))
     print("Wrote \(count) entries (\(data.count) bytes) to \(outputPath)")
 case "quick-from-cangjie":
-    // Quick (速成) candidates are derived from cangjie5 by taking the first
-    // and last letter of each cangjie code as the quick code.
+    guard args.count >= 5 else { usage() }
     let inputPath = args[2]
-    let outputPath = args[3]
+    let freqPath = args[3]
+    let outputPath = args[4]
+    let freqDict = try loadCharFreq(freqPath)
     let content = try String(contentsOfFile: inputPath, encoding: .utf8)
     var inBody = false
     var trie = Trie()
@@ -56,7 +78,7 @@ case "quick-from-cangjie":
         guard parts.count >= 2 else { continue }
         let text = String(parts[0])
         let cangjieCode = String(parts[1])
-        let weight = parts.count >= 3 ? Int(parts[2]) ?? 0 : 0
+        let weight = freqDict[text] ?? 0
         guard !cangjieCode.isEmpty else { continue }
         let quickCode: String
         if cangjieCode.count == 1 {
