@@ -4,14 +4,7 @@ import SwiftUI
 struct SimpTradKeyboardApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            NavigationStack { SettingsView() }
         }
-    }
-}
-
-struct ContentView: View {
-    var body: some View {
-        Text("SimpTradKeyboard")
-            .padding()
     }
 }
