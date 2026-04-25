@@ -18,6 +18,7 @@ targets:
   SimpTradKeyboard:
     type: application
     platform: iOS
+    scheme: {}
     sources:
       - path: SimpTradKeyboard
     dependencies:
