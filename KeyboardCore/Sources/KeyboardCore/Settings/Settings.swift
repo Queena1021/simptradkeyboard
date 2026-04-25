@@ -18,7 +18,7 @@ public final class Settings {
 
     public var outputMode: OutputMode {
         get {
-            (defaults.string(forKey: Key.outputMode).flatMap(OutputMode.init(rawValue:))) ?? .traditional
+            (defaults.string(forKey: Key.outputMode).flatMap(OutputMode.init(rawValue:))) ?? .simplified
         }
         set { defaults.set(newValue.rawValue, forKey: Key.outputMode) }
     }

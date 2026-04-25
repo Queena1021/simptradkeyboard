@@ -10,8 +10,8 @@ final class SettingsTests: XCTestCase {
         settings = Settings(defaults: defaults)
     }
 
-    func test_defaults_outputMode_isTraditional() {
-        XCTAssertEqual(settings.outputMode, .traditional)
+    func test_defaults_outputMode_isSimplified() {
+        XCTAssertEqual(settings.outputMode, .simplified)
     }
 
     func test_defaults_imeMode_isQuick() {
