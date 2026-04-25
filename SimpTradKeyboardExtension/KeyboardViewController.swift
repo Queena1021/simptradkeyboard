@@ -33,11 +33,10 @@ final class KeyboardViewController: UIInputViewController {
     private var lastCommittedChar: String = ""    // for showing predictions after commit
 
     private var composingBuffer: String = ""        // raw codes typed (e.g. "of")
-    private var composingDisplay: String = ""       // radical labels shown in document (e.g. "人火")
+    private var composingDisplay: String = ""       // radical labels for preview (e.g. "人火")
     private enum LayoutMode { case chinese, symbols, moreSymbols }
     private var layoutMode: LayoutMode = .chinese
     private var keyboardView: KeyboardView?
-    private let composingBar = ComposingBar()
     private let candidateBar = CandidateBar()
     private let candidateGrid = CandidateGridView()
     private var isExpanded = false
@@ -54,16 +53,11 @@ final class KeyboardViewController: UIInputViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         loadEngines()
-        view.addSubview(composingBar)
         view.addSubview(candidateBar)
         NSLayoutConstraint.activate([
-            composingBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            composingBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            composingBar.topAnchor.constraint(equalTo: view.topAnchor),
-            composingBar.heightAnchor.constraint(equalToConstant: 28),
             candidateBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             candidateBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            candidateBar.topAnchor.constraint(equalTo: composingBar.bottomAnchor),
+            candidateBar.topAnchor.constraint(equalTo: view.topAnchor),
             candidateBar.heightAnchor.constraint(equalToConstant: 40)
         ])
         candidateBar.onSelect = { [weak self] cand in
@@ -174,7 +168,6 @@ final class KeyboardViewController: UIInputViewController {
             }
             composingBuffer += k
             composingDisplay += label
-            composingBar.show(composingDisplay)
             refreshCandidates()
         case .symbol(let s):
             commitFirstCandidate()
@@ -183,7 +176,6 @@ final class KeyboardViewController: UIInputViewController {
             if !composingBuffer.isEmpty {
                 composingBuffer.removeLast()
                 composingDisplay.removeLast()
-                composingBar.show(composingDisplay)
                 refreshCandidates()
             } else {
                 textDocumentProxy.deleteBackward()
@@ -223,11 +215,6 @@ final class KeyboardViewController: UIInputViewController {
         }
     }
 
-    private func clearComposing() {
-        composingDisplay = ""
-        composingBar.clear()
-    }
-
     private func refreshCandidates() {
         guard !composingBuffer.isEmpty else {
             currentCandidates = []
@@ -261,7 +248,7 @@ final class KeyboardViewController: UIInputViewController {
         let displayed = currentCandidates.map {
             Candidate(text: $0.display, frequency: $0.original.frequency, source: $0.original.source)
         }
-        candidateBar.show(displayed)
+        candidateBar.show(displayed, composing: composingDisplay)
         candidateGrid.show(displayed)
         barMode = displayed.isEmpty ? .empty : .candidates
     }
@@ -307,10 +294,10 @@ final class KeyboardViewController: UIInputViewController {
     private func selectCandidate(_ displayed: Candidate) {
         // Candidate passed to the bar carries the `display` text; we find matching DisplayedCandidate
         guard let dc = currentCandidates.first(where: { $0.display == displayed.text }) else { return }
-        clearComposing()
         textDocumentProxy.insertText(dc.display)
         learningStore?.recordSelection(code: composingBuffer, candidate: dc.original.text)
         composingBuffer = ""
+        composingDisplay = ""
         currentCandidates = []
         lastCommittedChar = dc.display
         showPredictions(after: dc.display)
@@ -319,17 +306,17 @@ final class KeyboardViewController: UIInputViewController {
 
     private func commitFirstCandidate() {
         guard let first = currentCandidates.first else {
-            clearComposing()
             composingBuffer = ""
+            composingDisplay = ""
             candidateBar.clear()
             barMode = .empty
             collapseGridIfNeeded()
             return
         }
-        clearComposing()
         textDocumentProxy.insertText(first.display)
         learningStore?.recordSelection(code: composingBuffer, candidate: first.original.text)
         composingBuffer = ""
+        composingDisplay = ""
         currentCandidates = []
         lastCommittedChar = first.display
         showPredictions(after: first.display)

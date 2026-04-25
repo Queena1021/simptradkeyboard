@@ -38,9 +38,9 @@ final class KeyButton: UIButton {
     private func applyStyle() {
         switch kind {
         case .return:
-            backgroundColor = .systemBlue
-            setTitle("→", for: .normal)
-            setTitleColor(.white, for: .normal)
+            backgroundColor = UIColor.systemGray3.withAlphaComponent(0.6)
+            setTitle("↵", for: .normal)
+            setTitleColor(.label, for: .normal)
         case .code(_, let label):
             backgroundColor = UIColor.systemGray3.withAlphaComponent(0.6)
             setTitle(label, for: .normal)

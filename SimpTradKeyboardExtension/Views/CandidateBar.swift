@@ -56,9 +56,28 @@ final class CandidateBar: UIView {
         ])
     }
 
-    func show(_ candidates: [Candidate]) {
+    func show(_ candidates: [Candidate], composing: String = "") {
         self.candidates = candidates
         stack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+
+        if !composing.isEmpty {
+            let label = UILabel()
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 22),
+                .foregroundColor: UIColor.label,
+                .underlineStyle: NSUnderlineStyle.single.rawValue,
+                .underlineColor: UIColor.systemYellow
+            ]
+            label.attributedText = NSAttributedString(string: "  \(composing)  ", attributes: attrs)
+            stack.addArrangedSubview(label)
+
+            let separator = UIView()
+            separator.backgroundColor = UIColor.separator.withAlphaComponent(0.5)
+            separator.translatesAutoresizingMaskIntoConstraints = false
+            separator.widthAnchor.constraint(equalToConstant: 0.5).isActive = true
+            stack.addArrangedSubview(separator)
+        }
+
         for c in candidates {
             let btn = UIButton(type: .system)
             btn.setTitle("  \(c.text)  ", for: .normal)
@@ -67,7 +86,7 @@ final class CandidateBar: UIView {
             btn.addAction(UIAction { [weak self] _ in self?.onSelect?(c) }, for: .touchUpInside)
             stack.addArrangedSubview(btn)
         }
-        expandButton.isHidden = candidates.isEmpty
+        expandButton.isHidden = candidates.isEmpty && composing.isEmpty
     }
 
     func clear() {
